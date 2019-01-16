@@ -1,0 +1,11 @@
+
+PORTS="
+  --publish 64080:64080"
+
+VOLUMES=""
+
+ENV="
+  --env QUASSEL_HOST="localhost" \
+  --env QUASSEL_PORT=4242 \
+  --env FORCE_DEFAULT=true \
+  --env WEBSERVER_MODE=https"

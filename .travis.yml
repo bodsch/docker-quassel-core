@@ -1,0 +1,17 @@
+sudo: required
+
+services:
+  - docker
+
+env:
+  global:
+    - QUASSELCORE_VERSION=${QUASSELCORE_VERSION:-2.2.8}
+    - BUILD_DATE=$(date +"%Y-%m-%d")
+    - BUILD_TYPE=stable
+
+jobs:
+  include:
+    - stage: build
+      script:
+        - make
+
