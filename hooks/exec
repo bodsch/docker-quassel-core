@@ -11,4 +11,4 @@ docker exec \
   --interactive \
   --tty \
   ${DOCKER_NAME_SPACE}-${DOCKER_IMAGE_NAME} \
-  /bin/bash
+  /bin/sh

@@ -1,11 +1,12 @@
 
 PORTS="
-  --publish 64080:64080"
+  --publish 4242:4242"
 
-VOLUMES=""
+VOLUMES="
+  --volume $PWD/data:/var/lib/quassel"
 
 ENV="
   --env QUASSEL_HOST="localhost" \
   --env QUASSEL_PORT=4242 \
-  --env FORCE_DEFAULT=true \
+  --env LOGLEVEL=Debug \
   --env WEBSERVER_MODE=https"
