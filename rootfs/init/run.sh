@@ -3,10 +3,12 @@
 LISTEN=${LISTEN:-"0.0.0.0"}
 LOGLEVEL=${LOGLEVEL:-"Info"}
 PORT=${PORT:="4242"}
-CONFIG_DIR=/var/lib/quassel
+CONFIG_DIR=${QUASSELCORE_INSTALL_DIR}/data
 
 QUASSELCORE_USER=${QUASSELCORE_USER:-quasselcore}
 QUASSELCORE_PASSWORD=${QUASSELCORE_PASSWORD:-quasselcore}
+
+export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
 . /init/output.sh
 
@@ -118,6 +120,27 @@ run() {
 
   #python2 /usr/bin/manageusers.py list
 }
+
+
+
+
+#    if settings.value("Config/Version") is None:
+#        settings.setValue("Config/Version", 1)
+#
+#    # Set Auth Settings
+#    authSettings = {
+#        "Authenticator" : "LDAP",
+#        "AuthProperties" : {
+#            "BaseDN": os.environ["LDAP_BASE_DN"],
+#            "BindDN": os.environ["LDAP_BIND_DN"],
+#            "BindPassword": os.environ["LDAP_BIND_PASSWORD"],
+#            "Filter": os.environ["LDAP_FILTER"],
+#            "Hostname": os.environ["LDAP_HOSTNAME"],
+#            "Port": os.environ["LDAP_PORT"],
+#            "UidAttribute": os.environ["LDAP_UID_ATTR"]
+#        }
+
+
 
 
 run

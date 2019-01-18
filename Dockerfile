@@ -1,5 +1,8 @@
 
-FROM alpine:edge as stage1
+FROM alpine:3.8 as stage1
+
+ENV \
+  QUASSELCORE_INSTALL_DIR=/quasselcore
 
 RUN \
   apk update  --quiet && \
@@ -8,34 +11,121 @@ RUN \
 WORKDIR /tmp
 
 RUN \
-  apk add \
+  apk add     --quiet \
     build-base \
     openssl-dev \
-    boost-dev \
+    sqlite-dev \
     git \
     cmake
 
 RUN \
-  apk add \
-    qt5-qtbase-dev || true
+  git clone git://code.qt.io/qt/qt5.git
+
+WORKDIR /tmp/qt5
 
 RUN \
-  apk add \
-    qt5-qtscript-dev || true
+  git checkout 5.11
 
 RUN \
-  apk add \
-    qca-dev || true
+  apk add perl linux-headers
 
 RUN \
-  ln -sf /usr/lib/qt5/bin/uic /usr/bin/uic
+  ./init-repository --module-subset=qtbase,qtscript
+
+RUN \
+  ./configure \
+    -confirm-license \
+    -opensource \
+    -release \
+    -strip \
+    -silent \
+    -ssl \
+    -sqlite \
+    -no-gif \
+    -no-ico \
+    -no-libpng \
+    -no-libjpeg \
+    -no-harfbuzz \
+    -no-freetype \
+    -no-opengl \
+    -no-accessibility \
+    -no-gui \
+    -no-widgets \
+    -no-dbus \
+    -no-linuxfb \
+    -no-libudev \
+    -no-sm \
+    -no-evdev \
+    -no-xcb \
+    -no-xkb \
+    -no-xkbcommon-evdev \
+    -nomake examples \
+    -nomake tests \
+    -prefix /usr/local
+
+RUN \
+  make -j4 && \
+  make install
+
+# ---------------------------------------------------------------------------------------
+
+WORKDIR /tmp
+
+RUN \
+  apk add curl xz
+
+RUN \
+  curl \
+    --silent \
+    --location \
+    --retry 3 \
+    http://download.kde.org/stable/qca/2.1.3/src/qca-2.1.3.tar.xz  \
+  | unxz \
+  | tar x -C /tmp/
+
+WORKDIR /tmp/qca-2.1.3
+
+RUN \
+  cmake \
+    -DCMAKE_PREFIX_PATH=/usr/local/ \
+    -DQT_BINARY_DIR=/usr/local/bin \
+    -DQT_LIBRARY_DIR=/usr/local/lib .
+
+RUN \
+  make -j4 && \
+  make install
+
+# ---------------------------------------------------------------------------------------
+
+RUN \
+  curl \
+    --silent \
+    --location \
+    --retry 3 \
+    http://mirror.eu.oneandone.net/software/openldap/openldap-release/openldap-2.4.47.tgz \
+  | gunzip \
+  | tar x -C /tmp/
+
+RUN \
+  apk add db-dev groff
+
+WORKDIR /tmp/openldap-2.4.47
+
+RUN \
+  ./configure \
+    --prefix=/usr/local/
+
+RUN \
+  make depend && \
+  make -j4 && \
+  make install
+
+# ---------------------------------------------------------------------------------------
+
+WORKDIR /tmp
 
 RUN \
   git clone https://github.com/quassel/quassel
-
-RUN \
-  git clone https://github.com/eugeii/quassel-manage-users.git manage-users && \
-  chmod +x manage-users/manageusers.py
 
 WORKDIR /tmp/quassel
 
@@ -65,50 +155,60 @@ WORKDIR /tmp/quassel/build
 
 RUN \
   cmake \
+    -DCMAKE_PREFIX_PATH=/usr/local/ \
     -DUSE_QT4=OFF \
     -DUSE_QT5=ON \
     -DUSE_CCACHE=OFF \
     -DWITH_WEBKIT=OFF \
     -DWITH_KDE=OFF \
+    -DWITH_LDAP=ON \
     -DWANT_MONO=OFF \
     -DWITH_OXYGEN_ICONS=OFF \
     -DWANT_CORE=ON \
     -DWANT_QTCLIENT=OFF \
     -DWITH_BUNDLED_ICONS=OFF \
-    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLDAP_INCLUDE_DIR=/tmp/openldap-2.4.47/include/ \
+    -DCMAKE_INSTALL_PREFIX=${QUASSELCORE_INSTALL_DIR} \
     -DCMAKE_INSTALL_LIBDIR=lib \
-    .. && \
-  make && \
+    ..
+
+RUN \
+  make -j4 && \
   make install
+
+# ---------------------------------------------------------------------------------------
+
+RUN \
+  ${QUASSELCORE_INSTALL_DIR}/bin/quasselcore --version
 
 WORKDIR /tmp
 
 RUN \
-  #git clone https://github.com/eugeii/quassel-manage-users.git manage-users && \
-  ls -l manage-users/manageusers.py && \
+  git clone https://github.com/eugeii/quassel-manage-users.git manage-users && \
   chmod +x manage-users/manageusers.py
 
 RUN \
-  ls -lth /usr/lib/*
-
-RUN \
-  ls -lth /usr/bin/*
+  rm -rf \
+    /usr/local/lib/libQt5Concurrent.* \
+    /usr/local/lib/libQt5Test.* \
+    /usr/local/lib/libQt5Xml.*
 
 # ---------------------------------------------------------------------------------------
 
-FROM alpine:edge
+FROM alpine:3.8
 
 ENV \
-  HOME=/var/lib/quassel \
-  TZ='Europe/Berlin'
+  TZ='Europe/Berlin' \
+  QUASSELCORE_INSTALL_DIR=/quasselcore \
+  HOME=${QUASSELCORE_INSTALL_DIR}
 
 COPY --from=stage1  /tmp/manage-users/manageusers.py   /usr/bin/
-COPY --from=stage1  /usr/lib/libQt5Script*       /usr/lib/
-COPY --from=stage1  /usr/bin/quasselcore         /usr/bin/
-# works only with master branch
-#if [[ "${BUILD_TYPE}" != "stable" ]] ; then \
-#COPY --from=stage1  /usr/lib/libquassel*         /usr/lib/ ; \
-#fi
+COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}      ${QUASSELCORE_INSTALL_DIR}
+COPY --from=stage1  /usr/local/lib/libQt5*.so.5     /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2  /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2 /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/liblber-2.4.so.2 /usr/local/lib/
+COPY --from=stage1  /usr/local/plugins/sqldrivers   /usr/local/plugins/sqldrivers/
 
 RUN \
   apk update  --quiet --no-cache && \
@@ -116,6 +216,11 @@ RUN \
   apk add     --quiet --no-cache --virtual .build-deps \
     shadow \
     tzdata && \
+  apk add \
+    openssl \
+    sqlite \
+    libstdc++ \
+    python2 && \
   cp "/usr/share/zoneinfo/${TZ}" /etc/localtime && \
   echo "${TZ}" > /etc/localtime && \
   /usr/sbin/useradd \
@@ -123,30 +228,21 @@ RUN \
     --shell /bin/false \
     --comment "User for quassel core" \
     --no-create-home \
-    --home-dir /var/lib/quassel \
+    --home-dir ${QUASSELCORE_INSTALL_DIR} \
     --uid 1000 \
     quassel && \
-  apk add \
-    qt5-qtbase-sqlite \
-    qca \
-    openssl \
-    icu \
-    libstdc++ \
-    python2 && \
+  chown -R quassel:quassel ${QUASSELCORE_INSTALL_DIR} && \
   apk del --quiet --purge .build-deps && \
   rm -rf \
     /tmp/* \
     /var/cache/apk/
 
-#RUN \
-#  ldd /usr/bin/quasselcore
-
 COPY rootfs/ /
 
 USER quassel
-WORKDIR /var/lib/quassel
+WORKDIR ${QUASSELCORE_INSTALL_DIR}
 
-VOLUME ["/var/lib/quassel"]
+VOLUME ["${QUASSELCORE_INSTALL_DIR}/data"]
 CMD [ "/bin/sh" ]
 
 EXPOSE 4242

@@ -3,7 +3,7 @@ PORTS="
   --publish 4242:4242"
 
 VOLUMES="
-  --volume $PWD/data:/var/lib/quassel"
+  --volume $PWD/data:/quasselcore/data"
 
 ENV="
   --env QUASSEL_HOST="localhost" \
