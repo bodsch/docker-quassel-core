@@ -8,15 +8,24 @@ RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
-WORKDIR /tmp
-
 RUN \
-  apk add     --quiet \
+  apk add \
     build-base \
     openssl-dev \
     sqlite-dev \
+    python3-dev \
+    curl \
+    perl \
+    linux-headers \
+    p7zip \
     git \
     cmake
+
+# ---------------------------------------------------------------------------------------
+#
+# get and build Qt 5.12
+
+WORKDIR /tmp
 
 RUN \
   git clone git://code.qt.io/qt/qt5.git
@@ -24,10 +33,8 @@ RUN \
 WORKDIR /tmp/qt5
 
 RUN \
-  git checkout 5.11
-
-RUN \
-  apk add perl linux-headers
+  git checkout 5.12 && \
+  git describe --tags --always | sed 's/^v//'
 
 RUN \
   ./init-repository --module-subset=qtbase,qtscript
@@ -58,7 +65,6 @@ RUN \
     -no-evdev \
     -no-xcb \
     -no-xkb \
-    -no-xkbcommon-evdev \
     -nomake examples \
     -nomake tests \
     -prefix /usr/local
@@ -193,6 +199,20 @@ RUN \
     /usr/local/lib/libQt5Test.* \
     /usr/local/lib/libQt5Xml.*
 
+COPY rootfs/ /
+
+WORKDIR /src/quasselcore-config
+
+RUN \
+  qmake && \
+  make
+
+WORKDIR /src/quasselcore-usermanager
+
+RUN \
+  qmake && \
+  make
+
 # ---------------------------------------------------------------------------------------
 
 FROM alpine:3.8
@@ -204,6 +224,8 @@ ENV \
 
 COPY --from=stage1  /tmp/manage-users/manageusers.py   /usr/bin/
 COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}      ${QUASSELCORE_INSTALL_DIR}
+COPY --from=stage1  /src/quasselcore-config/quasselcore-config            ${QUASSELCORE_INSTALL_DIR}/bin/
+COPY --from=stage1  /src/quasselcore-usermanager/quasselcore-usermanager  ${QUASSELCORE_INSTALL_DIR}/bin/
 COPY --from=stage1  /usr/local/lib/libQt5*.so.5     /usr/local/lib/
 COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2  /usr/local/lib/
 COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2 /usr/local/lib/
@@ -232,14 +254,15 @@ RUN \
     --uid 1000 \
     quassel && \
   chown -R quassel:quassel ${QUASSELCORE_INSTALL_DIR} && \
-  apk del --quiet --purge .build-deps && \
-  rm -rf \
-    /tmp/* \
-    /var/cache/apk/
+  apk del --quiet --purge .build-deps
+#  rm -rf \
+#    /tmp/* \
+#    /src \
+#    /var/cache/apk/
 
 COPY rootfs/ /
 
-USER quassel
+#USER quassel
 WORKDIR ${QUASSELCORE_INSTALL_DIR}
 
 VOLUME ["${QUASSELCORE_INSTALL_DIR}/data"]

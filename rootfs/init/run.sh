@@ -10,6 +10,15 @@ QUASSELCORE_PASSWORD=${QUASSELCORE_PASSWORD:-quasselcore}
 
 export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
+
+#LDAP_HOSTNAME URI of the LDAP server - e.g. ldap://localhost or ldaps://localhost
+#LDAP_PORT Port of the LDAP server.
+#LDAP_BIND_DN Bind DN of the LDAP server.
+#LDAP_BIND_PASSWORD Bind password for the bind DN of the LDAP server.
+#LDAP_BASE_DN Search base DN of the LDAP server.
+#LDAP_FILTER Search filter for user accounts on the LDAP server e.g. (objectClass=posixAccount)
+#LDAP_UID_ATTR UID attribute to use for finding user accounts. e.g. uid
+
 . /init/output.sh
 
 # -------------------------------------------------------------------------------------------------
@@ -24,12 +33,23 @@ trap finish SIGINT SIGTERM INT TERM EXIT
 
 # -------------------------------------------------------------------------------------------------
 
+stdbool() {
+
+  if [ -z "$1" ]
+  then
+    echo "n"
+  else
+    echo ${1:0:1} | tr [A-Z] [a-z]
+  fi
+}
+
+
 watch_and_kill() {
   sleep 5s
   killall -9 quasselcore
 }
 
-create_vertificate() {
+create_certificate() {
 
   # generate key
   if [ ! -f ${CONFIG_DIR}/quasselCert.pem ]
@@ -75,6 +95,13 @@ create_database() {
   fi
 }
 
+config_ldap() {
+
+  quasselcore-config --file data/quasselcore.conf
+
+  quasselcore-config --file data/quasselcore.conf --dump
+}
+
 start_quasselcore() {
 
   # permissions
@@ -88,6 +115,11 @@ start_quasselcore() {
     --loglevel=${LOGLEVEL}
     --port=${PORT}"
 
+  if [ $(stdbool $DEV_QUASSEL_DEBUG) == "y" ]
+  then
+    command_args="${command_args} --debug"
+  fi
+
   log_info "start quasselcore"
 
   quasselcore \
@@ -96,51 +128,33 @@ start_quasselcore() {
 
 add_quasselcore_user() {
 
-  if [ $(python2 /usr/bin/manageusers.py list | wc -l) -eq 1 ]
+  if [ $(/init/manageusers.py list | wc -l) -eq 1 ]
   then
     log_info "add core user ${QUASSELCORE_USER}"
 
-    python2 \
-      /usr/bin/manageusers.py add \
+    /init/manageusers.py add \
       ${QUASSELCORE_USER} \
       ${QUASSELCORE_PASSWORD} > /dev/null
   fi
+
+
+  /init/manageusers.py add \
+      foofii \
+      barbar
 }
 
 
 run() {
 
-  create_vertificate
+  create_certificate
 
   create_database
 
-  add_quasselcore_user
+  config_ldap
+
+  #add_quasselcore_user
 
   start_quasselcore
-
-  #python2 /usr/bin/manageusers.py list
 }
-
-
-
-
-#    if settings.value("Config/Version") is None:
-#        settings.setValue("Config/Version", 1)
-#
-#    # Set Auth Settings
-#    authSettings = {
-#        "Authenticator" : "LDAP",
-#        "AuthProperties" : {
-#            "BaseDN": os.environ["LDAP_BASE_DN"],
-#            "BindDN": os.environ["LDAP_BIND_DN"],
-#            "BindPassword": os.environ["LDAP_BIND_PASSWORD"],
-#            "Filter": os.environ["LDAP_FILTER"],
-#            "Hostname": os.environ["LDAP_HOSTNAME"],
-#            "Port": os.environ["LDAP_PORT"],
-#            "UidAttribute": os.environ["LDAP_UID_ATTR"]
-#        }
-
-
-
 
 run
