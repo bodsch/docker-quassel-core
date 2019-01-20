@@ -74,6 +74,8 @@ RUN \
   make install
 
 # ---------------------------------------------------------------------------------------
+#
+# get and build QCA 2.1.3
 
 WORKDIR /tmp
 
@@ -102,6 +104,8 @@ RUN \
   make install
 
 # ---------------------------------------------------------------------------------------
+#
+# get and build openldap
 
 RUN \
   curl \
@@ -127,6 +131,8 @@ RUN \
   make install
 
 # ---------------------------------------------------------------------------------------
+#
+# get and build quassel
 
 WORKDIR /tmp
 
@@ -187,17 +193,13 @@ RUN \
 RUN \
   ${QUASSELCORE_INSTALL_DIR}/bin/quasselcore --version
 
-WORKDIR /tmp
-
-RUN \
-  git clone https://github.com/eugeii/quassel-manage-users.git manage-users && \
-  chmod +x manage-users/manageusers.py
-
 RUN \
   rm -rf \
     /usr/local/lib/libQt5Concurrent.* \
     /usr/local/lib/libQt5Test.* \
     /usr/local/lib/libQt5Xml.*
+
+WORKDIR /tmp
 
 COPY rootfs/ /
 
@@ -222,15 +224,14 @@ ENV \
   QUASSELCORE_INSTALL_DIR=/quasselcore \
   HOME=${QUASSELCORE_INSTALL_DIR}
 
-COPY --from=stage1  /tmp/manage-users/manageusers.py   /usr/bin/
-COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}      ${QUASSELCORE_INSTALL_DIR}
+COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}                            ${QUASSELCORE_INSTALL_DIR}
 COPY --from=stage1  /src/quasselcore-config/quasselcore-config            ${QUASSELCORE_INSTALL_DIR}/bin/
 COPY --from=stage1  /src/quasselcore-usermanager/quasselcore-usermanager  ${QUASSELCORE_INSTALL_DIR}/bin/
-COPY --from=stage1  /usr/local/lib/libQt5*.so.5     /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2  /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2 /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/liblber-2.4.so.2 /usr/local/lib/
-COPY --from=stage1  /usr/local/plugins/sqldrivers   /usr/local/plugins/sqldrivers/
+COPY --from=stage1  /usr/local/lib/libQt5*.so.5                           /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2                        /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2                       /usr/local/lib/
+COPY --from=stage1  /usr/local/lib/liblber-2.4.so.2                       /usr/local/lib/
+COPY --from=stage1  /usr/local/plugins/sqldrivers                         /usr/local/plugins/sqldrivers/
 
 RUN \
   apk update  --quiet --no-cache && \
@@ -240,9 +241,8 @@ RUN \
     tzdata && \
   apk add \
     openssl \
-    sqlite \
-    libstdc++ \
-    python2 && \
+    sqlite-libs \
+    libstdc++ && \
   cp "/usr/share/zoneinfo/${TZ}" /etc/localtime && \
   echo "${TZ}" > /etc/localtime && \
   /usr/sbin/useradd \
@@ -254,19 +254,19 @@ RUN \
     --uid 1000 \
     quassel && \
   chown -R quassel:quassel ${QUASSELCORE_INSTALL_DIR} && \
-  apk del --quiet --purge .build-deps
-#  rm -rf \
-#    /tmp/* \
-#    /src \
-#    /var/cache/apk/
+  apk del --quiet --purge .build-deps && \
+  rm -rf \
+    /tmp/* \
+    /src/* \
+    /var/cache/apk/
 
 COPY rootfs/ /
 
-#USER quassel
+USER quassel
 WORKDIR ${QUASSELCORE_INSTALL_DIR}
 
 VOLUME ["${QUASSELCORE_INSTALL_DIR}/data"]
-CMD [ "/bin/sh" ]
+CMD [ "/init/run.sh" ]
 
 EXPOSE 4242
 

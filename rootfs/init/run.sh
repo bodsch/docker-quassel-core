@@ -47,6 +47,8 @@ stdbool() {
 watch_and_kill() {
   sleep 5s
   killall -9 quasselcore
+
+  sleep 2s
 }
 
 create_certificate() {
@@ -90,7 +92,7 @@ create_database() {
 
     quasselcore \
       --configdir=${CONFIG_DIR} \
-      --loglevel=Info \
+      --loglevel=Debug \
       --select-backend=SQLite > /dev/null
   fi
 }
@@ -128,19 +130,20 @@ start_quasselcore() {
 
 add_quasselcore_user() {
 
-  if [ $(/init/manageusers.py list | wc -l) -eq 1 ]
+  if [ $(quasselcore-usermanager --file ${CONFIG_DIR}/quassel-storage.sqlite --list | grep -c ${QUASSELCORE_USER}) -eq 0 ]
   then
     log_info "add core user ${QUASSELCORE_USER}"
 
-    /init/manageusers.py add \
-      ${QUASSELCORE_USER} \
-      ${QUASSELCORE_PASSWORD} > /dev/null
+    quasselcore-usermanager \
+      --file ${CONFIG_DIR}/quassel-storage.sqlite \
+      --add \
+      --user ${QUASSELCORE_USER} \
+      --password ${QUASSELCORE_PASSWORD} > /dev/null
   fi
 
-
-  /init/manageusers.py add \
-      foofii \
-      barbar
+  quasselcore-usermanager \
+    --file ${CONFIG_DIR}/quassel-storage.sqlite \
+    --list
 }
 
 
@@ -152,7 +155,7 @@ run() {
 
   config_ldap
 
-  #add_quasselcore_user
+  add_quasselcore_user
 
   start_quasselcore
 }

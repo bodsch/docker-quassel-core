@@ -8,20 +8,12 @@
 #include <vector>
 
 #include <QString>
-/*
-#include <QSettings>
-#include <QByteArray>
-#include <QVariant>
-#include <QVariantMap>
-#include <QJsonDocument>
-#include <QJsonObject>
-*/
+
 #include <QFile>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlRecord>
 #include <QSqlError>
-#include <QtCrypto>
 #include <QCryptographicHash>
 
 #include <QDebug>
@@ -39,6 +31,15 @@ void print_usage (void);
 QString hashPasswordSha2_512(const QString& password);
 QString sha2_512(const QString& input);
 
+enum Mode {
+  list_user,
+  add_user,
+  delete_user,
+  update_user,
+  rename_user,
+  validate_user
+};
+
 // ------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -48,12 +49,20 @@ int main(int argc, char *argv[]) {
   QString quassel_password = "";
 
   int opt = 0;
-  const char* const short_opts = "hVu:p:f:";
+  const char* const short_opts = "hVladrvuU:P:f:";
   const option long_opts[] = {
     {"help"    , no_argument      , nullptr, 'h'},
     {"version" , no_argument      , nullptr, 'V'},
-    {"user"    , required_argument, nullptr, 'u'},
-    {"password", required_argument, nullptr, 'p'},
+
+    {"list"    , no_argument      , nullptr, 'l'},
+    {"add"     , no_argument      , nullptr, 'a'},
+    {"delete"  , no_argument      , nullptr, 'd'},
+    {"rename"  , no_argument      , nullptr, 'r'},
+    {"validate", no_argument      , nullptr, 'v'},
+    {"update"  , no_argument      , nullptr, 'u'},
+
+    {"user"    , required_argument, nullptr, 'U'},
+    {"password", required_argument, nullptr, 'P'},
     {"file"    , required_argument, nullptr, 'f'},
     {nullptr   , 0, nullptr, 0}
   };
@@ -61,7 +70,9 @@ int main(int argc, char *argv[]) {
   if(argc < 2)
     return 1;
 
-  int long_index =0;
+  Mode mode = list_user;
+
+  int long_index = 0;
   while((opt = getopt_long(argc, argv, short_opts, long_opts, &long_index)) != -1) {
 
     switch(opt) {
@@ -71,17 +82,41 @@ int main(int argc, char *argv[]) {
       case 'V':
         std::cout << progname << " v" << version << std::endl;
         return 0;
+      case 'l':
+        mode = list_user;
+        break;
+      case 'a':
+        mode = add_user;
+        break;
+      case 'd':
+        mode = delete_user;
+        break;
+      case 'u':
+        mode = update_user;
+        break;
+      case 'r':
+        mode = rename_user;
+        break;
+      case 'v':
+        mode = validate_user;
+        break;
       case 'f':
         database_file = optarg;
         break;
-      case 'u':
+      case 'U':
         quassel_user = optarg;
         break;
-      case 'p':
+      case 'P':
         quassel_password = optarg;
         break;
       default:
         print_usage();
+
+        std::cout
+          << "unknown opt: "
+          << opt
+          << std::endl;
+
         return 1;
     }
   }
@@ -97,6 +132,23 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if( mode != list_user && quassel_user.isEmpty() ) {
+    print_usage();
+    std::cerr
+      << "missing user.\n"
+      << std::endl;
+    return 1;
+  }
+
+  if( ( mode != list_user && mode != delete_user ) && quassel_password.isEmpty() ) {
+    print_usage();
+    std::cerr
+      << "missing password.\n"
+      << std::endl;
+    return 1;
+  }
+
+
   if( QFile(database_file).exists() == false ) {
     print_usage();
     std::cerr
@@ -109,228 +161,93 @@ int main(int argc, char *argv[]) {
    *
    */
 
+  QuasselUser qu(database_file);
 
+  if( mode == add_user ) {
 
-  QuasselUser qu(database_file);// = new QuasselUser();
+    if( qu.addUser(quassel_user, quassel_password) != 0 ) {
+      std::cout
+        << "user "
+        << quassel_user.toStdString()
+        << " successfuly added"
+        << std::endl;
+      return 0;
+    } else {
+      return 1;
+    }
 
-  qDebug() << "sqlite is available : " << qu.isAvailable();
-  qDebug() << "get user id: " << qu.getUserId("dodger");
+  } else
+  if( mode == delete_user ) {
 
-  qDebug() << "add user id: " << qu.addUser("foo", "bar");
+    std::cout
+      << "delete user "
+      << quassel_user.toStdString()
+      << std::endl;
 
-  qDebug() << "update user: " << qu.updateUser("foo", "barbar");
+    qu.deleteUser(quassel_user);
 
-  qDebug() << "validate user: " << qu.validateUser("foo", "barbar2");
+  } else
+  if( mode == update_user ) {
 
-  qDebug() << qu.getUserAuthenticator(1);
+    if( qu.updateUser(quassel_user, quassel_password) == true ) {
 
-/*
-  QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+      std::cout
+        << "user "
+        << quassel_user.toStdString()
+        << " successfuly updated"
+        << std::endl;
+      return 0;
 
-  db.setDatabaseName(database_file);
+    } else {
 
-  if(db.open() == false) {
-    qDebug() << db.lastError().text();
+      std::cout
+        << "user "
+        << quassel_user.toStdString()
+        << " update failed"
+        << std::endl;
 
-    return 1;
-  }
+      return 1;
+    }
+  } else
+  if( mode == rename_user ) {
 
+    // renameUser(const QString& username, const QString& newName)
 
-  QSqlQuery query;
-  query.exec("SELECT * FROM quasseluser");
+    std::cout
+      << "rename_user is currently not supported"
+      << std::endl;
+    return 0;
+  } else
+  if( mode == validate_user ) {
 
-  while (query.next()) {
-    QString name = query.value("username").toString();
-    QString password = query.value("password").toString();
-    qDebug() << name;
-    qDebug() << password;
-  }
+    if( qu.validateUser(quassel_user, quassel_password) != 0 ) {
 
+      std::cout
+        << "username and password are valid"
+        << std::endl;
+      return 0;
+    } else {
 
-  QString db_username = ""; //query.record().indexOf("username");
-
-  while (query.next()) {
-    QString name = query.value(db_username).toString();
-    qDebug() << name;
-  }
-
-  qDebug() << hashPasswordSha2_512("7naiy6is");
-*/
-
-/*
-  //query.bindValue(":name", name);
-  if(query.exec()) {
-    success = true;
-
+      std::cout
+        << "username and password are not valid"
+        << std::endl;
+      return 1;
+    }
   } else {
-    qDebug() << query.lastError();
+
+    QMap<uint, QString> users = qu.getAllAuthUserNames();
+
+    for(auto e : users.keys()) {
+      std::cout
+        << "uid: "
+        << e
+        << ", username: " << users.value(e).toStdString()
+        << std::endl;
+    }
+
   }
-
-
-
-  QCA::init();
-  if(!QCA::isSupported("sha1"))
-    qDebug("SHA-1 not supported!");
-*/
-
-
-/*
-  QSettings settings( database_file,  QSettings::IniFormat );
-
-  if(dump_database_file) {
-
-    //
-    //  dump configuration
-    //
-
-    QVariant authSettings = settings.value("Core/AuthSettings");
-    QJsonObject authJson = authSettings.toJsonObject();
-    QVariant storageSettings = settings.value("Core/StorageSettings");
-    QJsonObject storageJson = storageSettings.toJsonObject();
-
-    QJsonDocument doc;
-    doc.setObject(authJson);
-    QString authStrJson( doc.toJson(QJsonDocument::Compact) );
-
-    doc.setObject(storageJson);
-    QString storageStrJson( doc.toJson(QJsonDocument::Compact) );
-
-    std::cout
-      << std::endl
-      << "config file : " << database_file.toStdString()
-      << std::endl
-      << std::endl
-      << "config version: " << settings.value("Config/Version").toUInt()
-      << std::endl
-      << "Core AuthSettings: " << authStrJson.toStdString()
-      << std::endl
-      << "Core StorageSettings: " << storageStrJson.toStdString()
-      << std::endl
-      << std::endl;
-
-    return 0;
-  }
-
-  bool ldpa_config_valid = true;
-  QByteArray config_dir         = qgetenv("QUASSEL_CONFIG_DIR");
-  QByteArray ldap_base_dn       = qgetenv("LDAP_BASE_DN");
-  QByteArray ldap_bind_dn       = qgetenv("LDAP_BIND_DN");
-  QByteArray ldap_bind_password = qgetenv("LDAP_BIND_PASSWORD");
-  QByteArray ldap_filter        = qgetenv("LDAP_FILTER");
-  QByteArray ldap_hostname      = qgetenv("LDAP_HOSTNAME");
-  QByteArray ldap_port          = qgetenv("LDAP_PORT");
-  QByteArray ldap_uid_attribute = qgetenv("LDAP_UID_ATTR");
-
-  std::ostringstream ss;
-
-  // set Config Version
-  if( settings.value("Config/Version").toUInt() == 0 )
-    settings.setValue("Config/Version", 1);
-
-  // ----------------
-
-  if(ldap_bind_dn.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_BASE_DN missing"
-      << std::endl;
-  }
-
-  if(ldap_bind_password.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_BIND_PASSWORD missing"
-      << std::endl;
-  }
-
-  if(ldap_filter.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_FILTER missing"
-      << std::endl;
-  }
-
-  if(ldap_hostname.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_HOSTNAME missing"
-      << std::endl;
-  }
-
-  if(ldap_port.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_PORT missing"
-      << std::endl;
-  }
-
-  if(ldap_uid_attribute.isEmpty()) {
-    ldpa_config_valid = false;
-    ss
-      << " - LDAP_UID_ATTR missing"
-      << std::endl;
-  }
-
-  if( ldpa_config_valid == false ) {
-
-    std::cout
-      << std::endl
-      << "WARNING:"
-      << std::endl
-      << "The LDAP configuration was not written because not all required environment variables were set."
-      << std::endl
-      << ss.str()
-      << std::endl;
-
-    return 0;
-  }
-
-  QVariantMap map;
-  QVariantMap map2;
-
-  map2.insert("BaseDN"       , ldap_base_dn);
-  map2.insert("BindDN"       , ldap_bind_dn);
-  map2.insert("BindPassword" , ldap_bind_password);
-  map2.insert("Filter"       , ldap_filter);
-  map2.insert("Hostname"     , ldap_hostname);
-  map2.insert("Port"         , ldap_port);
-  map2.insert("UidAttribute" , ldap_uid_attribute);
-
-  map.insert("Authenticator", "LDAP");
-  map.insert("AuthProperties", map2);
-
-  QJsonObject json = QJsonObject::fromVariantMap(map);
-  settings.setValue("Core/AuthSettings", json.toVariantMap());
-*/
 
   return 0;
-}
-
-
-/**
- *  from https://github.com/quassel/quassel/blob/812b7b9f9d4cbd413294849624e7af7e5394f388/src/core/storage.cpp
- */
-
-QString hashPasswordSha2_512(const QString& password) {
-
-    // Generate a salt of 512 bits (64 bytes) using the Mersenne Twister
-    std::random_device seed;
-    std::mt19937 generator(seed());
-    std::uniform_int_distribution<int> distribution(0, 255);
-    QByteArray saltBytes;
-    saltBytes.resize(64);
-    for (int i = 0; i < 64; i++) {
-        saltBytes[i] = (unsigned char)distribution(generator);
-    }
-    QString salt(saltBytes.toHex());
-
-    // Append the salt to the password, hash the result, and append the salt value
-    return sha2_512(password + salt) + ":" + salt;
-}
-
-
-QString sha2_512(const QString& input) {
-  return QString(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha512).toHex());
 }
 
 /**
@@ -343,15 +260,7 @@ void print_help (void) {
     << progname << " v" << version << std::endl
     << "  Copyright (c) " << copyright << " " << email << std::endl
     << std::endl
-    << "write an quassel core config file" << std::endl
-    << "read following environment variablen to  write an Ldap configuration:" << std::endl
-    << "  - LDAP_BASE_DN, " << std::endl
-    << "  - LDAP_BIND_DN " << std::endl
-    << "  - LDAP_BIND_PASSWORD" << std::endl
-    << "  - LDAP_FILTER, " << std::endl
-    << "  - LDAP_HOSTNAME " << std::endl
-    << "  - LDAP_PORT" << std::endl
-    << "  - LDAP_UID_ATTR" << std::endl;
+    << "manage quassel core users" << std::endl;
 
   print_usage();
 
@@ -361,18 +270,45 @@ void print_help (void) {
     << "    Print detailed help screen" << std::endl
     << " -V, --version" << std::endl
     << "    Print version information" << std::endl
-    << " -f, --file" << std::endl
-    << "    config file." << std::endl
-    << " -d, --dump" << std::endl
-    << "    dump content config file" << std::endl;
+    << " -f, --file <database file>" << std::endl
+    << "    sqlite database file." << std::endl
+    << " -a, --add" << std::endl
+    << "    add an quassel core user (requires --user and --password)." << std::endl
+    << " -d, --delete" << std::endl
+    << "    delete an quassel core user (requires --user)." << std::endl
+    << " -r, --rename" << std::endl
+    << "    rename an quassel core user (requires --user) (NOT SUPPORTED YET!)." << std::endl
+    << " -v, --validate" << std::endl
+    << "    validate credentials of an quassel core user (requires --user and --password)." << std::endl
+    << " -u, --update" << std::endl
+    << "    set an new password of an existing quassel core user (requires --user and --password) (INSECURE, NO DOUBLE CHECK YET)" << std::endl
+    << " -l, --list" << std::endl
+    << "    list all quassel core users." << std::endl
+    << " -U, --user <username>" << std::endl
+    << "    the quassel core username." << std::endl
+    << " -P, --password <password>" << std::endl
+    << "    the password for the quassel core user." << std::endl
+    << std::endl;
 }
 
 /**
  *
  */
 void print_usage (void) {
-  std::cout << std::endl;
-  std::cout << "Usage:" << std::endl;
-  std::cout << " " << progname << " [-file <config file>] --dump"  << std::endl;
-  std::cout << std::endl;
+  std::cout
+    << std::endl
+    << "Usage:"
+    << " " << progname
+    << " [--help]"
+    << " [--version]"
+    << " [--file]"
+    << " [--user]"
+    << " [--password]"
+    << " [--add]"
+    << " [--delete]"
+    << " [--rename]"
+    << " [--validate]"
+    << " [--update]"
+    << " [--list]"
+    << std::endl;
 }

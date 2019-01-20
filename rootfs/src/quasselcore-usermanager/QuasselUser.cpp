@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2005-2018 by the Quassel Project                        *
- *   devel@quassel-irc.org                                                 *
+ *   Copyright (C) 2019 by Bodo Schulz                                     *
+ *   bodo@boone-schulz.de                                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,15 +18,11 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
  ***************************************************************************/
 
-#include <iostream>
-
 #include "QuasselUser.h"
-#include <QtSql>
 
+QuasselUser::QuasselUser(const QString& file){
 
-QuasselUser::QuasselUser(const QString& _database_file){
-
-  database_file = _database_file;
+  database_file = file;
 }
 
 bool QuasselUser::isAvailable() const {
@@ -53,57 +49,6 @@ QString QuasselUser::description() const {
             "databases that do not require access via network. Use SQLite if your Quassel Core should store its data on the same machine "
             "it is running on, and if you only expect a few users to use your core.");
 }
-/*
-int QuasselUser::installedSchemaVersion() {
-
-  // only used when there is a singlethread (during startup)
-  // so we don't need locking here
-  QSqlQuery query = logDb().exec("SELECT value FROM coreinfo WHERE key = 'schemaversion'");
-  if (query.first())
-    return query.value(0).toInt();
-
-  // maybe it's really old... (schema version 0)
-  query = logDb().exec("SELECT MAX(version) FROM coreinfo");
-  if (query.first())
-    return query.value(0).toInt();
-
-  return AbstractSqlStorage::installedSchemaVersion();
-}
-
-bool QuasselUser::updateSchemaVersion(int newVersion)
-{
-    // only used when there is a singlethread (during startup)
-    // so we don't need locking here
-    QSqlQuery query(logDb());
-    query.prepare("UPDATE coreinfo SET value = :version WHERE key = 'schemaversion'");
-    query.bindValue(":version", newVersion);
-    query.exec();
-
-    bool success = true;
-    if (query.lastError().isValid()) {
-        qCritical() << "QuasselUser::updateSchemaVersion(int): Updating schema version failed!";
-        success = false;
-    }
-    return success;
-}
-
-bool QuasselUser::setupSchemaVersion(int version)
-{
-    // only used when there is a singlethread (during startup)
-    // so we don't need locking here
-    QSqlQuery query(logDb());
-    query.prepare("INSERT INTO coreinfo (key, value) VALUES ('schemaversion', :version)");
-    query.bindValue(":version", version);
-    query.exec();
-
-    bool success = true;
-    if (query.lastError().isValid()) {
-        qCritical() << "QuasselUser::setupSchemaVersion(int): Updating schema version failed!";
-        success = false;
-    }
-    return success;
-}
-*/
 
 QSqlDatabase QuasselUser::logDb() {
 
@@ -116,16 +61,7 @@ QSqlDatabase QuasselUser::logDb() {
     db.setDatabaseName(database_file);
   }
 
-  //QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-  //db.setDatabaseName(database_file);
-
-  if(!db.isOpen()) {
-/*
-    qDebug() << db.lastError().text();
-    qWarning()
-      << "Database connection"
-      << displayName()
-      << "was lost, attempting to reconnect...";*/
+  if( !db.isOpen() ) {
     dbConnect(db);
   }
 
@@ -134,17 +70,18 @@ QSqlDatabase QuasselUser::logDb() {
 
 void QuasselUser::dbConnect(QSqlDatabase& db) {
 
-  if (!db.open()) {
-      qWarning() << "Unable to open database" << displayName();
-      qWarning() << "-" << db.lastError().text();
-  } else {
-    if (!initDbSession(db)) {
-      qWarning() << "Unable to initialize database" << displayName() ;
-      db.close();
-    }
+  if( !db.open() ) {
+    std::cerr
+      << std::endl
+      << "ERROR: "
+      << "Unable to open database" << displayName().toStdString()
+      << "file "
+      << database_file.toStdString()
+      << std::endl
+      << "-"
+      << db.lastError().text().toStdString();
   }
 }
-
 
 uint QuasselUser::addUser(const QString& user, const QString& password, const QString& authenticator) {
 
@@ -160,9 +97,6 @@ uint QuasselUser::addUser(const QString& user, const QString& password, const QS
   query.bindValue(":hashversion", HashVersion::Latest);
   query.bindValue(":authenticator", authenticator);
   query.exec();
-
-//   qDebug() << query.lastError();
-//   qDebug() << query.lastQuery();
 
   // user already exists - sadly 19 seems to be the general constraint violation error...
   // QSqlError("19", "Unable to fetch row", "UNIQUE constraint failed: quasseluser.username")
@@ -217,7 +151,6 @@ bool QuasselUser::updateUser(const QString& username, const QString& password) {
     return false;
 }
 
-
 void QuasselUser::renameUser(uint user, const QString& newName) {
 
   QSqlDatabase db = logDb();
@@ -230,15 +163,8 @@ void QuasselUser::renameUser(uint user, const QString& newName) {
 
   query.exec();
 
-//   qDebug() << query.lastError();
-//   qDebug() << query.lastQuery();
-//         lockForWrite();
-//         safeExec(query);
   db.commit();
-//     unlock();
-//   emit userRenamed(user, newName);
 }
-
 
 void QuasselUser::renameUser(const QString& username, const QString& newName) {
 
@@ -248,7 +174,6 @@ void QuasselUser::renameUser(const QString& username, const QString& newName) {
     renameUser(user_id, newName);
 }
 
-
 uint QuasselUser::validateUser(const QString& user, const QString& password) {
 
   uint userId = 0;
@@ -257,11 +182,7 @@ uint QuasselUser::validateUser(const QString& user, const QString& password) {
   QSqlQuery query(logDb());
   query.prepare("SELECT userid, password, hashversion, authenticator FROM quasseluser WHERE username = :username");
   query.bindValue(":username", user);
-
   query.exec();
-
-//   qDebug() << query.lastError();
-//   qDebug() << query.lastQuery();
 
   if( query.first() ) {
     userId = query.value("userid").toInt();
@@ -275,7 +196,6 @@ uint QuasselUser::validateUser(const QString& user, const QString& password) {
   return returnUserId;
 }
 
-
 uint QuasselUser::getUserId(const QString& username) {
 
   uint userId = 0;
@@ -286,14 +206,11 @@ uint QuasselUser::getUserId(const QString& username) {
   query.bindValue(":username", username);
   query.exec();
 
-//  qDebug() << query.lastQuery();
-
   if(query.first()) {
     userId = query.value("userid").toInt();
   }
   return userId;
 }
-
 
 QString QuasselUser::getUserAuthenticator(uint userid) {
 
@@ -302,7 +219,6 @@ QString QuasselUser::getUserAuthenticator(uint userid) {
   QSqlQuery query(logDb());
   query.prepare("SELECT authenticator FROM quasseluser WHERE userid = :userid");
   query.bindValue(":userid", userid);
-
   query.exec();
 
   if( query.first() ) {
@@ -311,8 +227,6 @@ QString QuasselUser::getUserAuthenticator(uint userid) {
 
   return authenticator;
 }
-
-
 
 void QuasselUser::deleteUser(uint user) {
 
@@ -340,7 +254,6 @@ void QuasselUser::deleteUser(uint user) {
   db.commit();
 }
 
-
 void QuasselUser::deleteUser(const QString& username) {
 
   uint user_id = getUserId(username);
@@ -349,8 +262,7 @@ void QuasselUser::deleteUser(const QString& username) {
     deleteUser(user_id);
 }
 
-
-QMap<UserId, QString> QuasselUser::getAllAuthUserNames() {
+QMap<uint, QString> QuasselUser::getAllAuthUserNames() {
 
   QMap<uint, QString> authusernames;
 
@@ -360,18 +272,15 @@ QMap<UserId, QString> QuasselUser::getAllAuthUserNames() {
   QSqlQuery query(db);
   query.prepare("SELECT userid, username FROM quasseluser;");
   query.exec();
-//   lockForRead();
-//   safeExec(query);
-//   watchQuery(query);
+
   while( query.next() ) {
     authusernames[query.value("userid").toInt()] = query.value("username").toString();
   }
 
   db.commit();
-//   unlock();
+
   return authusernames;
 }
-
 
 bool QuasselUser::checkHashedPassword(const QString& password, const QString& hashedPassword) {
 
@@ -395,15 +304,15 @@ QString QuasselUser::hashPasswordSha2_512(const QString& password) {
     std::uniform_int_distribution<int> distribution(0, 255);
     QByteArray saltBytes;
     saltBytes.resize(64);
+
     for (int i = 0; i < 64; i++) {
-        saltBytes[i] = (unsigned char)distribution(generator);
+      saltBytes[i] = (unsigned char)distribution(generator);
     }
     QString salt(saltBytes.toHex());
 
     // Append the salt to the password, hash the result, and append the salt value
     return sha2_512(password + salt) + ":" + salt;
 }
-
 
 QString QuasselUser::sha2_512(const QString& input) {
   return QString(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha512).toHex());
