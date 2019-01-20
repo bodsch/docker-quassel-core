@@ -34,3 +34,11 @@ clean:
 
 compose-file:
 	@hooks/compose-file
+
+linter:
+	@tests/linter.sh
+
+integration_test:
+	@tests/integration_test.sh
+
+test: linter integration_test

@@ -10,6 +10,8 @@ QUASSELCORE_PASSWORD=${QUASSELCORE_PASSWORD:-quasselcore}
 
 export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
+[[ -d ${CONFIG_DIR} ]] || mkdir -vp ${CONFIG_DIR}
+
 
 #LDAP_HOSTNAME URI of the LDAP server - e.g. ldap://localhost or ldaps://localhost
 #LDAP_PORT Port of the LDAP server.
@@ -39,7 +41,7 @@ stdbool() {
   then
     echo "n"
   else
-    echo ${1:0:1} | tr [A-Z] [a-z]
+    echo ${1:0:1} | tr '[:upper:]' '[:lower:]'
   fi
 }
 

@@ -1,0 +1,39 @@
+---
+version: '3.3'
+
+services:
+  quassel-core:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_DATE
+        - BUILD_VERSION
+        - BUILD_TYPE
+        - QUASSELCORE_VERSION
+    container_name: quassel-core
+    hostname: quassel-core
+    ports:
+      - 4242:4242
+    environment:
+      - QUASSEL_HOST
+      - QUASSEL_PORT
+      - FORCE_DEFAULT
+      - WEBSERVER_MODE
+      - PREFIX_PATH
+
+  quassel-web:
+    image: bodsch/docker-quassel-web:latest
+    container_name: quassel-web
+    hostname: quassel-web
+    ports:
+      - 64080:64080
+    environment:
+      - QUASSEL_HOST
+      - QUASSEL_PORT
+      - FORCE_DEFAULT
+      - WEBSERVER_MODE
+      - PREFIX_PATH
+    links:
+      - quassel-core

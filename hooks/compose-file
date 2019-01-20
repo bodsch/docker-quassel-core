@@ -5,14 +5,18 @@
 
 [[ -e hooks/environment ]] && . hooks/environment
 
-echo "BUILD_DATE=${BUILD_DATE}" > .env
-echo "BUILD_VERSION=${BUILD_VERSION}" >> .env
-echo "BUILD_TYPE=${BUILD_TYPE}" >> .env
-echo "QUASSELWEB_VERSION=${QUASSELWEB_VERSION}" >> .env
-echo "QUASSEL_HOST=172.17.0.1" >> .env
-echo "FORCE_DEFAULT=true" >> .env
-echo "WEBSERVER_MODE=https" >> .env
-echo "PREFIX_PATH=/irc" >> .env
+cat << EOF >> .env
+BUILD_DATE=${BUILD_DATE}
+BUILD_VERSION=${BUILD_VERSION}
+BUILD_TYPE=${BUILD_TYPE}
+
+QUASSEL_HOST=quassel-core
+QUASSEL_PORT=4242
+
+WEBSERVER_MODE=https
+FORCE_DEFAULT=true
+
+EOF
 
 docker-compose \
   --file docker-compose_example.yml \

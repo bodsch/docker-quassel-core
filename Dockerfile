@@ -253,6 +253,7 @@ RUN \
     --home-dir ${QUASSELCORE_INSTALL_DIR} \
     --uid 1000 \
     quassel && \
+  mkdir -v ${QUASSELCORE_INSTALL_DIR}/data && \
   chown -R quassel:quassel ${QUASSELCORE_INSTALL_DIR} && \
   apk del --quiet --purge .build-deps && \
   rm -rf \
