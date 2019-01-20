@@ -105,6 +105,27 @@ RUN \
 
 # ---------------------------------------------------------------------------------------
 #
+# get and build quassel-core tools
+
+WORKDIR /tmp
+
+RUN \
+  git clone https://github.com/bodsch/quassel-core-tools.git
+
+WORKDIR /tmp/quassel-core-tools/config
+
+RUN \
+  qmake && \
+  make
+
+WORKDIR /tmp/quassel-core-tools/usermanager
+
+RUN \
+  qmake && \
+  make
+
+# ---------------------------------------------------------------------------------------
+#
 # get and build openldap
 
 RUN \
@@ -201,20 +222,6 @@ RUN \
 
 WORKDIR /tmp
 
-COPY rootfs/ /
-
-WORKDIR /src/quasselcore-config
-
-RUN \
-  qmake && \
-  make
-
-WORKDIR /src/quasselcore-usermanager
-
-RUN \
-  qmake && \
-  make
-
 # ---------------------------------------------------------------------------------------
 
 FROM alpine:3.8
@@ -225,8 +232,8 @@ ENV \
   HOME=${QUASSELCORE_INSTALL_DIR}
 
 COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}                            ${QUASSELCORE_INSTALL_DIR}
-COPY --from=stage1  /src/quasselcore-config/quasselcore-config            ${QUASSELCORE_INSTALL_DIR}/bin/
-COPY --from=stage1  /src/quasselcore-usermanager/quasselcore-usermanager  ${QUASSELCORE_INSTALL_DIR}/bin/
+COPY --from=stage1  /tmp/quassel-core-tools/config/config                 ${QUASSELCORE_INSTALL_DIR}/bin/
+COPY --from=stage1  /tmp/quassel-core-tools/usermanager/usermanager       ${QUASSELCORE_INSTALL_DIR}/bin/
 COPY --from=stage1  /usr/local/lib/libQt5*.so.5                           /usr/local/lib/
 COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2                        /usr/local/lib/
 COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2                       /usr/local/lib/

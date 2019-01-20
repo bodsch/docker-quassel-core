@@ -101,9 +101,9 @@ create_database() {
 
 config_ldap() {
 
-  quasselcore-config --file data/quasselcore.conf
+  config --file data/quasselcore.conf
 
-  quasselcore-config --file data/quasselcore.conf --dump
+  config --file data/quasselcore.conf --dump
 }
 
 start_quasselcore() {
@@ -132,18 +132,18 @@ start_quasselcore() {
 
 add_quasselcore_user() {
 
-  if [ $(quasselcore-usermanager --file ${CONFIG_DIR}/quassel-storage.sqlite --list | grep -c ${QUASSELCORE_USER}) -eq 0 ]
+  if [ $(usermanager --file ${CONFIG_DIR}/quassel-storage.sqlite --list | grep -c ${QUASSELCORE_USER}) -eq 0 ]
   then
     log_info "add core user ${QUASSELCORE_USER}"
 
-    quasselcore-usermanager \
+    usermanager \
       --file ${CONFIG_DIR}/quassel-storage.sqlite \
       --add \
       --user ${QUASSELCORE_USER} \
       --password ${QUASSELCORE_PASSWORD} > /dev/null
   fi
 
-  quasselcore-usermanager \
+  usermanager \
     --file ${CONFIG_DIR}/quassel-storage.sqlite \
     --list
 }
