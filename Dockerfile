@@ -1,5 +1,5 @@
 
-FROM alpine:3.8 as stage1
+FROM alpine:3.9 as stage1
 
 ENV \
   QUASSELCORE_INSTALL_DIR=/quasselcore
@@ -77,21 +77,50 @@ RUN \
 #
 # get and build QCA 2.1.3
 
+FROM alpine:3.9 as stage2
+
+ENV \
+  QUASSELCORE_INSTALL_DIR=/quasselcore
+
+COPY --from=stage1  /usr/local                           /usr/local
+
+RUN \
+  apk update  --quiet && \
+  apk upgrade --quiet
+
+RUN \
+  apk add \
+    build-base \
+    openssl-dev \
+    sqlite-dev \
+    python3-dev \
+    curl \
+    perl \
+    linux-headers \
+    p7zip \
+    git \
+    cmake
+
 WORKDIR /tmp
 
 RUN \
-  apk add curl xz
+  git clone https://github.com/KDE/qca.git
 
-RUN \
-  curl \
-    --silent \
-    --location \
-    --retry 3 \
-    http://download.kde.org/stable/qca/2.1.3/src/qca-2.1.3.tar.xz  \
-  | unxz \
-  | tar x -C /tmp/
+WORKDIR /tmp/qca
 
-WORKDIR /tmp/qca-2.1.3
+#RUN \
+#  apk add curl xz
+#
+#RUN \
+#  curl \
+#    --silent \
+#    --location \
+#    --retry 3 \
+#    http://download.kde.org/stable/qca/2.1.3/src/qca-2.1.3.tar.xz  \
+#  | unxz \
+#  | tar x -C /tmp/
+#
+#WORKDIR /tmp/qca-2.1.3
 
 RUN \
   cmake \
@@ -106,6 +135,25 @@ RUN \
 # ---------------------------------------------------------------------------------------
 #
 # get and build quassel-core tools
+
+FROM alpine:3.9 as stage3
+
+ENV \
+  QUASSELCORE_INSTALL_DIR=/quasselcore
+
+COPY --from=stage2  /usr/local                           /usr/local
+
+RUN \
+  apk update  --quiet && \
+  apk upgrade --quiet
+
+RUN \
+  apk add \
+    build-base \
+    openssl-dev \
+    sqlite-dev \
+    linux-headers \
+    git
 
 WORKDIR /tmp
 
@@ -128,6 +176,25 @@ RUN \
 #
 # get and build openldap
 
+FROM alpine:3.9 as stage4
+
+RUN \
+  apk update  --quiet && \
+  apk upgrade --quiet
+
+RUN \
+  apk add \
+    build-base \
+    curl \
+    openssl-dev \
+    sqlite-dev \
+    linux-headers \
+    git \
+    db-dev \
+    groff
+
+WORKDIR /tmp
+
 RUN \
   curl \
     --silent \
@@ -136,9 +203,6 @@ RUN \
     http://mirror.eu.oneandone.net/software/openldap/openldap-release/openldap-2.4.47.tgz \
   | gunzip \
   | tar x -C /tmp/
-
-RUN \
-  apk add db-dev groff
 
 WORKDIR /tmp/openldap-2.4.47
 
@@ -154,6 +218,31 @@ RUN \
 # ---------------------------------------------------------------------------------------
 #
 # get and build quassel
+
+FROM alpine:3.9 as stage5
+
+ENV \
+  QUASSELCORE_INSTALL_DIR=/quasselcore
+
+COPY --from=stage1  /usr/local                           /usr/local
+COPY --from=stage2  /usr/local                           /usr/local
+COPY --from=stage4  /usr/local                           /usr/local
+COPY --from=stage4  /tmp/openldap-2.4.47                 /tmp/openldap-2.4.47
+
+RUN \
+  apk update  --quiet && \
+  apk upgrade --quiet
+
+RUN \
+  apk add \
+    build-base \
+    cmake \
+    openssl-dev \
+    sqlite-dev \
+    linux-headers \
+    git \
+    db-dev \
+    groff
 
 WORKDIR /tmp
 
@@ -224,20 +313,20 @@ WORKDIR /tmp
 
 # ---------------------------------------------------------------------------------------
 
-FROM alpine:3.8
+FROM alpine:3.9
 
 ENV \
   TZ='Europe/Berlin' \
   QUASSELCORE_INSTALL_DIR=/quasselcore \
   HOME=${QUASSELCORE_INSTALL_DIR}
 
-COPY --from=stage1  ${QUASSELCORE_INSTALL_DIR}                            ${QUASSELCORE_INSTALL_DIR}
-COPY --from=stage1  /tmp/quassel-core-tools/config/config                 ${QUASSELCORE_INSTALL_DIR}/bin/
-COPY --from=stage1  /tmp/quassel-core-tools/usermanager/usermanager       ${QUASSELCORE_INSTALL_DIR}/bin/
+COPY --from=stage5  ${QUASSELCORE_INSTALL_DIR}                            ${QUASSELCORE_INSTALL_DIR}
+COPY --from=stage3  /tmp/quassel-core-tools/config/config                 ${QUASSELCORE_INSTALL_DIR}/bin/
+COPY --from=stage3  /tmp/quassel-core-tools/usermanager/usermanager       ${QUASSELCORE_INSTALL_DIR}/bin/
 COPY --from=stage1  /usr/local/lib/libQt5*.so.5                           /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/libqca-qt5.so.2                        /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/libldap-2.4.so.2                       /usr/local/lib/
-COPY --from=stage1  /usr/local/lib/liblber-2.4.so.2                       /usr/local/lib/
+COPY --from=stage2  /usr/local/lib/libqca-qt5.so.2                        /usr/local/lib/
+COPY --from=stage4  /usr/local/lib/libldap-2.4.so.2                       /usr/local/lib/
+COPY --from=stage4  /usr/local/lib/liblber-2.4.so.2                       /usr/local/lib/
 COPY --from=stage1  /usr/local/plugins/sqldrivers                         /usr/local/plugins/sqldrivers/
 
 RUN \

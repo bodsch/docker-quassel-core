@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 cd $(dirname $(readlink -f "$0"))
 
 QUASSELCORE_PORT=4242
@@ -41,13 +43,13 @@ send_request() {
 inspect() {
 
   echo "inspect needed containers"
-  for d in $(docker ps | tail -n +2 | awk  '{print($1)}')
+  for d in $(docker ps | tail -n +2 | awk '{print($1)}')
   do
     docker inspect --format '{{with .State}} {{$.Name}} has pid {{.Pid}} {{end}}' ${d}
   done
 }
 
-if [[ $(docker ps | tail -n +2 | wc -l) -eq 2 ]]
+if [[ $(docker ps | tail -n +2 | egrep -c quassel) -eq 2 ]]
 then
   inspect
   wait_for_port
