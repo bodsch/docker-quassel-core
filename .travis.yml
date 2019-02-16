@@ -17,9 +17,8 @@ jobs:
 
     - stage: build and test
       script:
-        - make
         - make compose-file
-        - docker-compose build
+        - travis_wait 40 docker-compose build
         - docker-compose up -d
         - make test
         - docker-compose kill
@@ -27,7 +26,7 @@ jobs:
 
     - stage: push latest docker image
       script:
-        - make
+        - travis_wait 40 make
         - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
         #
         - docker tag  ${USER}/quassel-core:latest ${DOCKER_USERNAME}/docker-quassel-core:latest

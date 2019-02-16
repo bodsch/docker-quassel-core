@@ -1,7 +1,11 @@
+# ---------------------------------------------------------------------------------------
+#
+# get and build Qt 5.12
 
 FROM alpine:3.9 as stage1
 
 ENV \
+  QT_VERSION=5.12.1 \
   QUASSELCORE_INSTALL_DIR=/quasselcore
 
 RUN \
@@ -21,19 +25,19 @@ RUN \
     git \
     cmake
 
-# ---------------------------------------------------------------------------------------
-#
-# get and build Qt 5.12
-
 WORKDIR /tmp
 
 RUN \
-  git clone git://code.qt.io/qt/qt5.git
+  git clone https://code.qt.io/qt/qt5.git
 
 WORKDIR /tmp/qt5
 
 RUN \
-  git checkout 5.12 && \
+  if [ "${BUILD_TYPE}" == "stable" ] ; then \
+    echo "switch to stable Tag ${QT_VERSION} for $i" && \
+    git checkout "tags/v${QT_VERSION}" 2> /dev/null ; \
+  fi && \
+  # git checkout 5.12 && \
   git describe --tags --always | sed 's/^v//'
 
 RUN \
@@ -363,7 +367,7 @@ USER quassel
 WORKDIR ${QUASSELCORE_INSTALL_DIR}
 
 VOLUME ["${QUASSELCORE_INSTALL_DIR}/data"]
-CMD [ "/init/run.sh" ]
+CMD ["/init/run.sh"]
 
 EXPOSE 4242
 

@@ -45,6 +45,23 @@ stdbool() {
   fi
 }
 
+check_data_directory() {
+
+  if [ $(whoami) != $(stat -c %G ${CONFIG_DIR}) ]
+  then
+    log_error "wrong permissions for data directory."
+    log_error "the quassel user can't write into ${CONFIG_DIR}."
+
+    exit 1
+  fi
+
+#  stat -c %G ${CONFIG_DIR}
+#  stat -c %A ${CONFIG_DIR}
+#  stat -c %a ${CONFIG_DIR}
+
+  set -e
+  touch ${CONFIG_DIR}/.keep
+}
 
 watch_and_kill() {
   sleep 5s
@@ -119,7 +136,7 @@ start_quasselcore() {
     --loglevel=${LOGLEVEL}
     --port=${PORT}"
 
-  if [ $(stdbool $DEV_QUASSEL_DEBUG) == "y" ]
+  if [ $(stdbool $DEV_QUASSEL_DEBUG) = "y" ]
   then
     command_args="${command_args} --debug"
   fi
@@ -150,6 +167,8 @@ add_quasselcore_user() {
 
 
 run() {
+
+  check_data_directory
 
   create_certificate
 

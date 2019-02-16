@@ -16,12 +16,8 @@ services:
     hostname: quassel-core
     ports:
       - 4242:4242
-    environment:
-      - QUASSEL_HOST
-      - QUASSEL_PORT
-      - FORCE_DEFAULT
-      - WEBSERVER_MODE
-      - PREFIX_PATH
+#    volumes:
+#      - ./core:/quasselcore/data
 
   quassel-web:
     image: bodsch/docker-quassel-web:latest
@@ -35,5 +31,7 @@ services:
       - FORCE_DEFAULT
       - WEBSERVER_MODE
       - PREFIX_PATH
+#    volumes:
+#      - ./web:/quasselcore/data
     links:
       - quassel-core
