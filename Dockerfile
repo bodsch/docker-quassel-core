@@ -37,7 +37,6 @@ RUN \
     echo "switch to stable Tag ${QT_VERSION} for $i" && \
     git checkout "tags/v${QT_VERSION}" 2> /dev/null ; \
   fi && \
-  # git checkout 5.12 && \
   git describe --tags --always | sed 's/^v//'
 
 RUN \
@@ -112,22 +111,9 @@ RUN \
 
 WORKDIR /tmp/qca
 
-#RUN \
-#  apk add curl xz
-#
-#RUN \
-#  curl \
-#    --silent \
-#    --location \
-#    --retry 3 \
-#    http://download.kde.org/stable/qca/2.1.3/src/qca-2.1.3.tar.xz  \
-#  | unxz \
-#  | tar x -C /tmp/
-#
-#WORKDIR /tmp/qca-2.1.3
-
 RUN \
   cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr/local/ \
     -DCMAKE_PREFIX_PATH=/usr/local/ \
     -DQT_BINARY_DIR=/usr/local/bin \
     -DQT_LIBRARY_DIR=/usr/local/lib .
