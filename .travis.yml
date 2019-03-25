@@ -5,7 +5,7 @@ services:
 
 env:
   global:
-    - QUASSELCORE_VERSION=${QUASSELCORE_VERSION:-0.13.0}
+    - QUASSELCORE_VERSION=${QUASSELCORE_VERSION:-0.13.1}
     - BUILD_DATE=$(date +"%Y-%m-%d")
     - BUILD_TYPE=stable
 
@@ -13,7 +13,7 @@ jobs:
   include:
     - stage: build
       script:
-        - make
+        - travis_wait 40 make
 
     - stage: build and test
       script:
