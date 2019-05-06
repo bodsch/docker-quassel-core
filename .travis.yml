@@ -1,38 +1,31 @@
 sudo: required
-
 services:
-  - docker
-
+- docker
 env:
   global:
-    - QUASSELCORE_VERSION=${QUASSELCORE_VERSION:-0.13.1}
-    - BUILD_DATE=$(date +"%Y-%m-%d")
-    - BUILD_TYPE=stable
-
+  - QUASSELCORE_VERSION=${QUASSELCORE_VERSION:-0.13.1}
+  - BUILD_DATE=$(date +"%Y-%m-%d")
+  - BUILD_TYPE=stable
+  - secure: oieSYk3M9Knb3XOZat945KWGTSI7SknB9vJXfUgrDaX8xPYQ2q1MU5Etq7I7W6HDw4I3NoqeaW0UF0tpKxW6/lh5RhdvoxNlmpFdj8HsLTDI4petsLkdVWLOlDIiVQlmHa30U8HYztHJts9CWaVvP2bUp147Fcn686CkdwOt8vyubfkHrkG/YCjhhNKkh8LWhpdvw62+ylAOMrBuERQcFuyaPiYYdbvsPfbrhSeLgtYctjwb1E0lfIHWzixOHo7cHB8EkzbgJ3cUk//lVLUD3gvOIUn/XC+s9NUBNIu0QUvESPUyDdcg8aMjgvlCdUta9xEpIqVZBHSvb+cBYnodXM+pSNmA5i8COybc+yRqsyCL0lsRe7MnAWwk4zelJcKXN5gsVBwnMH4MWX5oUIEUn1sY8dUWIDhZtEDrwblVHqF8Ga5r+9QiFaA3m2+fRaX33UK7dQnSFM3FfFOS4qKPZuHrrCIVTINzWWS3YRBs8igRQjUvRsVffUokKiRkBgXry8DaytvVgUa4uqQYRXJcLGas9Rl0Mk+oByxurJ+JEEHtmCKGAeAwZ5CVP4C9b2HQi/3zA7ieNxRAO+wIj1PpV8cIT5jcd+f1Lcync/m0PIgrOgx/9whKXE8qb+fLJXfp9NfWTpwfnC5EWfZ+84SSTnQgEBsSiCuZAR4iTwYRkLY=
 jobs:
   include:
-    - stage: build
-      script:
-        - travis_wait 40 make
-
-    - stage: build and test
-      script:
-        - make compose-file
-        - travis_wait 40 docker-compose build
-        - docker-compose up -d
-        - make test
-        - docker-compose kill
-        - docker-compose down
-
-    - stage: push latest docker image
-      script:
-        - travis_wait 40 make
-        - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
-        #
-        - docker tag  ${USER}/quassel-core:latest ${DOCKER_USERNAME}/docker-quassel-core:latest
-        - docker push ${DOCKER_USERNAME}/docker-quassel-core:latest
-        #
-        - docker tag  ${DOCKER_USERNAME}/docker-quassel-core:latest ${DOCKER_USERNAME}/docker-quassel-core:${QUASSELCORE_VERSION}
-        - docker push ${DOCKER_USERNAME}/docker-quassel-core:${QUASSELCORE_VERSION}
-        #
-        - docker logout
+  - stage: build
+    script:
+    - travis_wait 40 make
+  - stage: build and test
+    script:
+    - make compose-file
+    - travis_wait 40 docker-compose build
+    - docker-compose up -d
+    - make test
+    - docker-compose kill
+    - docker-compose down
+  - stage: push latest docker image
+    script:
+    - travis_wait 40 make
+    - docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
+    - docker tag  ${USER}/quassel-core:latest ${DOCKER_USERNAME}/docker-quassel-core:latest
+    - docker push ${DOCKER_USERNAME}/docker-quassel-core:latest
+    - docker tag  ${DOCKER_USERNAME}/docker-quassel-core:latest ${DOCKER_USERNAME}/docker-quassel-core:${QUASSELCORE_VERSION}
+    - docker push ${DOCKER_USERNAME}/docker-quassel-core:${QUASSELCORE_VERSION}
+    - docker logout
