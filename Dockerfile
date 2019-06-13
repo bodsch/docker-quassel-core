@@ -4,6 +4,8 @@
 
 FROM alpine:3.9 as stage1
 
+ARG BUILD_TYPE=stable
+
 ENV \
   QT_VERSION=5.12.3 \
   QUASSELCORE_INSTALL_DIR=/quasselcore
