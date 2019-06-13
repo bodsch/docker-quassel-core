@@ -42,11 +42,17 @@ send_request() {
 
 inspect() {
 
+  echo ""
   echo "inspect needed containers"
   for d in $(docker ps | tail -n +2 | awk '{print($1)}')
   do
-    docker inspect --format '{{with .State}} {{$.Name}} has pid {{.Pid}} {{end}}' ${d}
+    # docker inspect --format "{{lower .Name}}" ${d}
+    c=$(docker inspect --format '{{with .State}} {{$.Name}} has pid {{.Pid}} {{end}}' ${d})
+    s=$(docker inspect --format '{{json .State.Health }}' ${d} | jq --raw-output .Status)
+
+    printf "%-40s - %s\n"  "${c}" "${s}"
   done
+  echo ""
 }
 
 if [[ $(docker ps | tail -n +2 | egrep -c quassel) -eq 2 ]]
@@ -58,9 +64,8 @@ then
 
   exit 0
 else
-  echo "please run "
-  echo " make start"
-  echo "before"
+  echo "no running quasselcore container found"
+  echo "please run 'make compose-file' and 'docker-compose up --build -d' before"
 
   exit 1
 fi

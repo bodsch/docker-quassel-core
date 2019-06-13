@@ -5,15 +5,17 @@
 FROM alpine:3.9 as stage1
 
 ENV \
-  QT_VERSION=5.12.1 \
+  QT_VERSION=5.12.3 \
   QUASSELCORE_INSTALL_DIR=/quasselcore
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
+# hadolint ignore=DL3018,DL3019
 RUN \
-  apk add \
+  apk add --quiet   \
     build-base \
     openssl-dev \
     sqlite-dev \
@@ -32,12 +34,13 @@ RUN \
 
 WORKDIR /tmp/qt5
 
+# hadolint ignore=DL4006
 RUN \
-  if [ "${BUILD_TYPE}" == "stable" ] ; then \
-    echo "switch to stable Tag ${QT_VERSION} for $i" && \
+  if [ "${BUILD_TYPE}" = "stable" ] ; then \
+    echo "switch to stable Tag ${QT_VERSION}" && \
     git checkout "tags/v${QT_VERSION}" 2> /dev/null ; \
   fi && \
-  git describe --tags --always | sed 's/^v//'
+  set -o pipefail && git describe --tags --always | sed 's/^v//'
 
 RUN \
   ./init-repository --module-subset=qtbase,qtscript
@@ -87,12 +90,14 @@ ENV \
 
 COPY --from=stage1  /usr/local                           /usr/local
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
+# hadolint ignore=DL3018,DL3019
 RUN \
-  apk add \
+  apk add --quiet \
     build-base \
     openssl-dev \
     sqlite-dev \
@@ -133,12 +138,14 @@ ENV \
 
 COPY --from=stage2  /usr/local                           /usr/local
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
+# hadolint ignore=DL3018,DL3019
 RUN \
-  apk add \
+  apk add --quiet \
     build-base \
     openssl-dev \
     sqlite-dev \
@@ -168,12 +175,14 @@ RUN \
 
 FROM alpine:3.9 as stage4
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
+# hadolint ignore=DL3018,DL3019
 RUN \
-  apk add \
+  apk add --quiet \
     build-base \
     curl \
     openssl-dev \
@@ -185,6 +194,7 @@ RUN \
 
 WORKDIR /tmp
 
+# hadolint ignore=DL4006
 RUN \
   curl \
     --silent \
@@ -219,12 +229,14 @@ COPY --from=stage2  /usr/local                           /usr/local
 COPY --from=stage4  /usr/local                           /usr/local
 COPY --from=stage4  /tmp/openldap-2.4.47                 /tmp/openldap-2.4.47
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet && \
   apk upgrade --quiet
 
+# hadolint ignore=DL3018,DL3019
 RUN \
-  apk add \
+  apk add --quiet \
     build-base \
     cmake \
     openssl-dev \
@@ -248,11 +260,12 @@ ARG BUILD_TYPE=stable
 ARG QUASSELCORE_VERSION
 
 RUN \
-  if [[ "${BUILD_TYPE}" = "stable" ]] ; then \
+  if [ "${BUILD_TYPE}" = "stable" ] ; then \
     echo "switch to stable Tag ${QUASSELCORE_VERSION}" && \
     git checkout tags/${QUASSELCORE_VERSION} ; \
   fi
 
+# hadolint ignore=DL4006
 RUN \
   QUASSELCORE_VERSION=$(git describe --tags --always | sed 's/^v//') && \
   echo " => build version ${QUASSELCORE_VERSION}"
@@ -319,6 +332,7 @@ COPY --from=stage4  /usr/local/lib/libldap-2.4.so.2                       /usr/l
 COPY --from=stage4  /usr/local/lib/liblber-2.4.so.2                       /usr/local/lib/
 COPY --from=stage1  /usr/local/plugins/sqldrivers                         /usr/local/plugins/sqldrivers/
 
+# hadolint ignore=DL3017,DL3018,DL3019
 RUN \
   apk update  --quiet --no-cache && \
   apk upgrade --quiet --no-cache && \

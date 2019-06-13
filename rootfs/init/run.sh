@@ -10,7 +10,7 @@ QUASSELCORE_PASSWORD=${QUASSELCORE_PASSWORD:-quasselcore}
 
 export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
-[[ -d ${CONFIG_DIR} ]] || mkdir -vp ${CONFIG_DIR}
+[ -d "${CONFIG_DIR}" ] || mkdir -vp "${CONFIG_DIR}"
 
 
 #LDAP_HOSTNAME URI of the LDAP server - e.g. ldap://localhost or ldaps://localhost
@@ -27,7 +27,7 @@ export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
 finish() {
   rv=$?
-  [ ${rv} -gt 0 ] && echo -e "\033[38;5;202m\033[1mexit with signal '${rv}'\033[0m"
+  [ ${rv} -gt 0 ] && log_INFO "exit with signal '${rv}'"
   exit $rv
 }
 
@@ -41,13 +41,13 @@ stdbool() {
   then
     echo "n"
   else
-    echo ${1:0:1} | tr '[:upper:]' '[:lower:]'
+    echo "${1:0:1}" | tr '[:upper:]' '[:lower:]'
   fi
 }
 
 check_data_directory() {
 
-  if [ $(whoami) != $(stat -c %G ${CONFIG_DIR}) ]
+  if [ "$(whoami)" != "$(stat -c %G "${CONFIG_DIR}")" ]
   then
     log_error "wrong permissions for data directory."
     log_error "the quassel user can't write into ${CONFIG_DIR}."
@@ -60,7 +60,7 @@ check_data_directory() {
 #  stat -c %a ${CONFIG_DIR}
 
   set -e
-  touch ${CONFIG_DIR}/.keep
+  touch "${CONFIG_DIR}/.keep"
 }
 
 watch_and_kill() {
@@ -73,7 +73,7 @@ watch_and_kill() {
 create_certificate() {
 
   # generate key
-  if [ ! -f ${CONFIG_DIR}/quasselCert.pem ]
+  if [ ! -f "${CONFIG_DIR}/quasselCert.pem" ]
   then
     log_info "create certificate"
 
@@ -91,26 +91,26 @@ create_certificate() {
       -nodes \
       -days 365 \
       -newkey rsa:4096 \
-      -keyout ${CONFIG_DIR}/quasselCert.key \
-      -out ${CONFIG_DIR}/quasselCert.crt \
+      -keyout "${CONFIG_DIR}/quasselCert.key" \
+      -out "${CONFIG_DIR}/quasselCert.crt" \
       -subj "/CN=Quassel-core" && \
     cat \
-      ${CONFIG_DIR}/quasselCert.key \
-      ${CONFIG_DIR}/quasselCert.crt \
-      > ${CONFIG_DIR}/quasselCert.pem
+      "${CONFIG_DIR}/quasselCert.key" \
+      "${CONFIG_DIR}/quasselCert.crt" \
+      > "${CONFIG_DIR}/quasselCert.pem"
   fi
 }
 
 create_database() {
 
-  if [ ! -f  ${CONFIG_DIR}/quassel-storage.sqlite ]
+  if [ ! -f "${CONFIG_DIR}/quassel-storage.sqlite" ]
   then
     log_info "create backend database"
 
     watch_and_kill &
 
     quasselcore \
-      --configdir=${CONFIG_DIR} \
+      --configdir="${CONFIG_DIR}" \
       --loglevel=Debug \
       --select-backend=SQLite > /dev/null
   fi
@@ -127,7 +127,7 @@ start_quasselcore() {
 
   # permissions
   chown -R quassel:quassel \
-    ${CONFIG_DIR}
+    "${CONFIG_DIR}"
 
   command_args="
     --configdir=${CONFIG_DIR}
@@ -136,7 +136,7 @@ start_quasselcore() {
     --loglevel=${LOGLEVEL}
     --port=${PORT}"
 
-  if [ $(stdbool $DEV_QUASSEL_DEBUG) = "y" ]
+  if [ "$(stdbool "${DEV_QUASSEL_DEBUG}")" = "y" ]
   then
     command_args="${command_args} --debug"
   fi
@@ -144,24 +144,24 @@ start_quasselcore() {
   log_info "start quasselcore"
 
   quasselcore \
-    ${command_args}
+    "${command_args}"
 }
 
 add_quasselcore_user() {
 
-  if [ $(usermanager --file ${CONFIG_DIR}/quassel-storage.sqlite --list | grep -c ${QUASSELCORE_USER}) -eq 0 ]
+  if [ "$(usermanager --file "${CONFIG_DIR}/quassel-storage.sqlite" --list | grep -c "${QUASSELCORE_USER}")" -eq 0 ]
   then
     log_info "add core user ${QUASSELCORE_USER}"
 
     usermanager \
-      --file ${CONFIG_DIR}/quassel-storage.sqlite \
+      --file "${CONFIG_DIR}/quassel-storage.sqlite" \
       --add \
-      --user ${QUASSELCORE_USER} \
-      --password ${QUASSELCORE_PASSWORD} > /dev/null
+      --user "${QUASSELCORE_USER}" \
+      --password "${QUASSELCORE_PASSWORD}" > /dev/null
   fi
 
   usermanager \
-    --file ${CONFIG_DIR}/quassel-storage.sqlite \
+    --file "${CONFIG_DIR}/quassel-storage.sqlite" \
     --list
 }
 
