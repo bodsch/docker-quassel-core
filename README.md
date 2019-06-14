@@ -4,7 +4,7 @@ Dockerfile for [quassel-core](https://github.com/quassel/quassel).
 
 This Container isr based on [Alpine]().
 
-All dependencies (like Qt5, Ldpa, QCA) will created inline fpr an smaller container and dependencies.
+All dependencies (like Qt5, Ldpa, QCA) will created inline for an smaller container and dependencies.
 
 
 https://github.com/Lazza/quassel-manage-users
@@ -40,9 +40,9 @@ Please read [Contribution](CONTRIBUTIONG.md)
 
 # supported Environment Vars
 
-- `LISTEN`
-- `LOGLEVEL`
-- `PORT`
+- `QUASSELCORE_LISTEN`
+- `QUASSELCORE_LOGLEVEL`
+- `QUASSELCORE_PORT`
 - `QUASSELCORE_USER` quasselcore
 - `QUASSELCORE_PASSWORD` quasselcore
 

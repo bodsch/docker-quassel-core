@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 cd $(dirname $(readlink -f "$0"))
 
 QUASSELCORE_PORT=4242
@@ -35,8 +33,15 @@ wait_for_port() {
 
 send_request() {
 
-  curl -I     http://localhost:${QUASSELCORE_PORT}
-  curl -k -I  https://localhost:64080
+  curl \
+    --silent \
+    --head \
+    http://localhost:${QUASSELCORE_PORT}
+
+  curl \
+    --insecure \
+    --head \
+    https://localhost:64080
 }
 
 
