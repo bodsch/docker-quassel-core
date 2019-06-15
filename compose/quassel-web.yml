@@ -1,0 +1,25 @@
+---
+version: '2.1'
+
+services:
+  quassel-web:
+    restart: always
+    image: bodsch/docker-quassel-web:latest
+    container_name: quassel-web
+    hostname: quassel-web
+    ports:
+      - 64080:64080
+      - 64443:64443
+    environment:
+      - QUASSELCORE_HOST
+      - QUASSELCORE_PORT
+      - QUASSELWEB_FORCE_DEFAULT
+      - QUASSELWEB_WEBSERVER_MODE
+      - QUASSELWEB_PREFIX_PATH
+    depends_on:
+      - quassel-core
+        #condition: service_healthy
+    links:
+      - quassel-core
+#    volumes:
+#      - ../web:/quasselcore/data

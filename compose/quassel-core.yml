@@ -1,0 +1,23 @@
+---
+version: '2.1'
+
+services:
+  quassel-core:
+    restart: always
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        - BUILD_DATE
+        - BUILD_VERSION
+        - BUILD_TYPE
+        - QUASSELCORE_VERSION
+    container_name: quassel-core
+    hostname: quassel-core
+    ports:
+      - 4242:4242
+    environment:
+      - QUASSELCORE_LOGLEVEL
+      - QUASSELCORE_DEV_DEBUG
+#    volumes:
+#      - ../core:/quasselcore/data
