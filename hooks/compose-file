@@ -11,14 +11,19 @@ BUILD_VERSION=${BUILD_VERSION}
 BUILD_TYPE=${BUILD_TYPE}
 
 QUASSELCORE_VERSION=${QUASSELCORE_VERSION}
-QUASSELCORE_LOGLEVEL=Debug
+QUASSELCORE_LOGLEVEL=Info
+QUASSELCORE_DEV_DEBUG=false
 
-QUASSEL_HOST=quassel-core
-QUASSEL_PORT=4242
+QUASSELCORE_HOST=quassel-core
+QUASSELCORE_PORT=4242
 
-WEBSERVER_MODE=http
+QUASSELWEB_FORCE_DEFAULT=false
+QUASSELWEB_WEBSERVER_MODE=http
+
 EOF
 
 docker-compose \
-  --file docker-compose_example.yml \
+  --file compose/head.yml \
+  --file compose/quassel-core.yml \
+  --file compose/quassel-web.yml \
   config > docker-compose.yml

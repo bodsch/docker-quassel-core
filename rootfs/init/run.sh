@@ -5,6 +5,10 @@ QUASSELCORE_LOGLEVEL=${QUASSELCORE_LOGLEVEL:-"Info"}
 QUASSELCORE_PORT=${QUASSELCORE_PORT:="4242"}
 QUASSELCORE_CONFIG_DIR=${QUASSELCORE_INSTALL_DIR}/data
 
+QUASSELCORE_DEV_DEBUG=${QUASSELCORE_DEV_DEBUG:-n}
+
+QUASSELCORE_LOCAL_CONFIG_DIR="${QUASSELCORE_INSTALL_DIR}/.config/quassel-irc.org"
+
 QUASSELCORE_USER=${QUASSELCORE_USER:-quasselcore}
 QUASSELCORE_PASSWORD=${QUASSELCORE_PASSWORD:-quasselcore}
 
@@ -12,7 +16,7 @@ export PATH=$PATH:${QUASSELCORE_INSTALL_DIR}/bin
 
 [ -d "${QUASSELCORE_CONFIG_DIR}" ] || mkdir -vp "${QUASSELCORE_CONFIG_DIR}"
 
-
+# LDAP suport is untested!
 #LDAP_HOSTNAME URI of the LDAP server - e.g. ldap://localhost or ldaps://localhost
 #LDAP_PORT Port of the LDAP server.
 #LDAP_BIND_DN Bind DN of the LDAP server.
@@ -55,8 +59,6 @@ check_data_directory() {
     exit 1
   fi
 
-  [ -d "${QUASSELCORE_INSTALL_DIR}/.config/quassel-irc.org" ] || mkdir -vp "${QUASSELCORE_INSTALL_DIR}/.config/quassel-irc.org"
-
 #  stat -c %G ${QUASSELCORE_CONFIG_DIR}
 #  stat -c %A ${QUASSELCORE_CONFIG_DIR}
 #  stat -c %a ${QUASSELCORE_CONFIG_DIR}
@@ -66,9 +68,9 @@ check_data_directory() {
 }
 
 watch_and_kill() {
-  sleep 5s
-  killall -9 quasselcore
 
+  sleep 15s
+  killall -15 quasselcore
   sleep 2s
 }
 
@@ -78,15 +80,6 @@ create_certificate() {
   if [ ! -f "${QUASSELCORE_CONFIG_DIR}/quasselCert.pem" ]
   then
     log_info "create certificate"
-
-  #  openssl req \
-  #    -x509 \
-  #    -nodes \
-  #    -days 365 \
-  #    -newkey rsa:4096 \
-  #    -keyout ${QUASSELCORE_CONFIG_DIR}/quasselCert.pem \
-  #    -out ${QUASSELCORE_CONFIG_DIR}/quasselCert.pem \
-  #    -subj "/CN=Quassel-core"
 
     openssl req \
       -x509 \
@@ -101,11 +94,6 @@ create_certificate() {
       "${QUASSELCORE_CONFIG_DIR}/quasselCert.crt" \
       > "${QUASSELCORE_CONFIG_DIR}/quasselCert.pem"
   fi
-
-  if ( [ -f "${QUASSELCORE_CONFIG_DIR}/quasselCert.pem" ] && [ ! -f "${QUASSELCORE_INSTALL_DIR}/.config/quassel-irc.org/quasselCert.pem" ] )
-  then
-    cp -v "${QUASSELCORE_CONFIG_DIR}/quasselCert.pem" "${QUASSELCORE_INSTALL_DIR}/.config/quassel-irc.org/quasselCert.pem"
-  fi
 }
 
 create_database() {
@@ -116,10 +104,20 @@ create_database() {
 
     watch_and_kill &
 
+    command_args="
+      --configdir ${QUASSELCORE_CONFIG_DIR}
+      --loglevel ${QUASSELCORE_LOGLEVEL}
+      --select-backend SQLite"
+
+    if [ "$(stdbool "${QUASSELCORE_DEV_DEBUG}")" = "y" ]
+    then
+      command_args="${command_args} --debug"
+    fi
+
     quasselcore \
-      --configdir="${QUASSELCORE_CONFIG_DIR}" \
-      --loglevel=Debug \
-      --select-backend=SQLite > /dev/null
+      "${command_args}"
+
+    sleep 5s
   fi
 }
 
@@ -137,13 +135,13 @@ start_quasselcore() {
     "${QUASSELCORE_CONFIG_DIR}"
 
   command_args="
-    --configdir=${QUASSELCORE_CONFIG_DIR}
+    --configdir ${QUASSELCORE_CONFIG_DIR}
     --require-ssl
-    --listen=${QUASSELCORE_LISTEN}
-    --loglevel=${QUASSELCORE_LOGLEVEL}
-    --port=${QUASSELCORE_PORT}"
+    --listen ${QUASSELCORE_LISTEN}
+    --loglevel ${QUASSELCORE_LOGLEVEL}
+    --port ${QUASSELCORE_PORT}"
 
-  if [ "$(stdbool "${DEV_QUASSEL_DEBUG}")" = "y" ]
+  if [ "$(stdbool "${QUASSELCORE_DEV_DEBUG}")" = "y" ]
   then
     command_args="${command_args} --debug"
   fi
@@ -164,12 +162,25 @@ add_quasselcore_user() {
       --file "${QUASSELCORE_CONFIG_DIR}/quassel-storage.sqlite" \
       --add \
       --user "${QUASSELCORE_USER}" \
-      --password "${QUASSELCORE_PASSWORD}" > /dev/null
+      --password "${QUASSELCORE_PASSWORD}"
   fi
 
   usermanager \
     --file "${QUASSELCORE_CONFIG_DIR}/quassel-storage.sqlite" \
     --list
+}
+
+config_directory() {
+
+  [ -d "${QUASSELCORE_LOCAL_CONFIG_DIR}" ] || mkdir -p "${QUASSELCORE_LOCAL_CONFIG_DIR}"
+
+  for f in quasselCert.pem quassel-storage.sqlite quasselcore.conf
+  do
+    if [ -f "${QUASSELCORE_CONFIG_DIR}/${f}" ] && [ ! -f "${QUASSELCORE_LOCAL_CONFIG_DIR}/${f}" ]
+    then
+      cp "${QUASSELCORE_CONFIG_DIR}/${f}" "${QUASSELCORE_LOCAL_CONFIG_DIR}/"
+    fi
+  done
 }
 
 
@@ -184,6 +195,8 @@ run() {
   config_ldap
 
   add_quasselcore_user
+
+  config_directory
 
   start_quasselcore
 }

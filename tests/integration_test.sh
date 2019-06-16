@@ -29,19 +29,27 @@ wait_for_port() {
     echo "could not connect to the algernon instance"
     exit 1
   fi
+  echo ""
 }
 
 send_request() {
 
+  echo "send request to quassel-core ${QUASSELCORE_PORT}"
   curl \
     --silent \
     --head \
     http://localhost:${QUASSELCORE_PORT}
 
+  echo "send request to quassel-web 64080"
   curl \
-    --insecure \
     --head \
-    https://localhost:64080
+    http://localhost:64080
+
+#  echo "send request to quassel-web 64443"
+#  curl \
+#    --insecure \
+#    --head \
+#    https://localhost:64443
 }
 
 

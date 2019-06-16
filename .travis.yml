@@ -12,6 +12,7 @@ jobs:
   - stage: build
     script:
     - travis_wait 40 make
+
   - stage: build and test
     script:
     - make compose-file
@@ -20,6 +21,7 @@ jobs:
     - make test
     - docker-compose kill
     - docker-compose down
+
   - stage: push latest docker image
     script:
     - travis_wait 40 make
