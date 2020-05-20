@@ -2,12 +2,12 @@
 #
 # get and build Qt 5.12
 
-FROM alpine:3.9 as stage1
+FROM alpine:3.11 as stage1
 
 ARG BUILD_TYPE=stable
 
 ENV \
-  QT_VERSION=5.12.3 \
+  QT_VERSION=5.12.8 \
   QUASSELCORE_INSTALL_DIR=/quasselcore
 
 # hadolint ignore=DL3017,DL3018,DL3019
@@ -85,10 +85,11 @@ RUN \
 #
 # get and build QCA 2.1.3
 
-FROM alpine:3.9 as stage2
+FROM alpine:3.11 as stage2
 
 ENV \
-  QUASSELCORE_INSTALL_DIR=/quasselcore
+  QUASSELCORE_INSTALL_DIR=/quasselcore \
+  QCA_VERSION=2.3.0
 
 COPY --from=stage1  /usr/local                           /usr/local
 
@@ -118,6 +119,14 @@ RUN \
 
 WORKDIR /tmp/qca
 
+# hadolint ignore=DL4006
+RUN \
+  if [ "${BUILD_TYPE}" = "stable" ] ; then \
+    echo "switch to stable Tag ${QCA_VERSION}" && \
+    git checkout "tags/v${QCA_VERSION}" 2> /dev/null ; \
+  fi && \
+  set -o pipefail && git describe --tags --always | sed 's/^v//'
+
 RUN \
   cmake \
     -DCMAKE_INSTALL_PREFIX=/usr/local/ \
@@ -133,7 +142,7 @@ RUN \
 #
 # get and build quassel-core tools
 
-FROM alpine:3.9 as stage3
+FROM alpine:3.11 as stage3
 
 ENV \
   QUASSELCORE_INSTALL_DIR=/quasselcore
@@ -175,7 +184,7 @@ RUN \
 #
 # get and build openldap
 
-FROM alpine:3.9 as stage4
+FROM alpine:3.11 as stage4
 
 # hadolint ignore=DL3017,DL3018,DL3019
 RUN \
@@ -221,7 +230,7 @@ RUN \
 #
 # get and build quassel
 
-FROM alpine:3.9 as stage5
+FROM alpine:3.11 as stage5
 
 ENV \
   QUASSELCORE_INSTALL_DIR=/quasselcore
@@ -318,7 +327,7 @@ WORKDIR /tmp
 
 # ---------------------------------------------------------------------------------------
 
-FROM alpine:3.9
+FROM alpine:3.11
 
 ENV \
   TZ='Europe/Berlin' \
