@@ -1,5 +1,9 @@
 # quassel-core
 
+⚠️ This project is not actively maintained
+
+----
+
 Dockerfile for [quassel-core](https://github.com/quassel/quassel).
 
 This Container isr based on [Alpine]().
